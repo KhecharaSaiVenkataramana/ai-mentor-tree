@@ -1,8 +1,6 @@
 # 🌳 The Ancient Tree — AI Mentor
 
-A web application featuring a procedurally-generated 3D tree that acts as an AI mentor. Users share a problem or question, and the tree responds with nature-themed wisdom while physically reacting — changing color and lighting — based on the sentiment of the user's input.
-
-![Demo](demo.gif)
+A full-stack web application featuring a procedurally-generated 3D tree that acts as an AI mentor. Users share a problem or question, and the tree responds with nature-themed wisdom while physically reacting — changing color and lighting — based on the sentiment of the user's input.
 
 ---
 
@@ -12,7 +10,7 @@ A web application featuring a procedurally-generated 3D tree that acts as an AI 
 |-------|-----------|
 | Frontend | React 18, React Three Fiber, Three.js, Vite |
 | Backend | Python 3.11+, FastAPI, Uvicorn |
-| AI | Anthropic Claude API (`claude-sonnet-4-20250514`) |
+| AI | Groq API (LLaMA 3.3 70B) |
 | 3D | Procedural tree built with React Three Fiber (no external model required) |
 
 ---
@@ -22,9 +20,7 @@ A web application featuring a procedurally-generated 3D tree that acts as an AI 
 ```
 ai-mentor-tree/
 ├── backend/
-│   ├── main.py              # FastAPI server + AI logic
-│   ├── requirements.txt
-│   └── .env.example
+│   └── main.py              # FastAPI server + AI logic
 └── frontend/
     ├── src/
     │   ├── components/
@@ -36,8 +32,7 @@ ai-mentor-tree/
     │   └── index.css
     ├── index.html
     ├── package.json
-    ├── vite.config.js
-    └── .env.example
+    └── vite.config.js
 ```
 
 ---
@@ -47,7 +42,7 @@ ai-mentor-tree/
 ### Prerequisites
 - Node.js 18+
 - Python 3.11+
-- An [Anthropic API key](https://console.anthropic.com/)
+- A free [Groq API key](https://console.groq.com) (no credit card required)
 
 ---
 
@@ -58,25 +53,32 @@ cd backend
 
 # Create and activate virtual environment
 python -m venv venv
-source venv/bin/activate      # Windows: venv\Scripts\activate
+
+# Windows:
+venv\Scripts\activate
+# Mac/Linux:
+source venv/bin/activate
 
 # Install dependencies
-pip install -r requirements.txt
+pip install fastapi uvicorn groq python-dotenv
 
-# Set up environment variables
-cp .env.example .env
-# Edit .env and add your Anthropic API key:
-# ANTHROPIC_API_KEY=sk-ant-...
+# Create .env file and add your Groq API key
+# Create a file called .env inside the backend folder with this content:
+# GROQ_API_KEY=gsk_your-key-here
 
 # Start the server
-uvicorn main:app --reload --port 8000
+venv\Scripts\python.exe -m uvicorn main:app --port 8000
 ```
 
 The API will be running at **http://localhost:8000**
 
 - `POST /mentor` — Main endpoint (accepts `{ "message": "..." }`, returns advice JSON)
-- `GET /health` — Health check
 - `GET /docs` — Interactive API docs (Swagger UI)
+
+> **Windows tip:** If the above doesn't work, set the key directly in PowerShell:
+> ```
+> $env:GROQ_API_KEY="gsk_your-key-here"; venv\Scripts\python.exe -m uvicorn main:app --port 8000
+> ```
 
 ---
 
@@ -88,9 +90,8 @@ cd frontend
 # Install dependencies
 npm install
 
-# Set up environment variables
-cp .env.example .env
-# Default VITE_API_URL=http://localhost:8000 should work as-is
+# Install 3D libraries
+npm install three @react-three/fiber @react-three/drei
 
 # Start dev server
 npm run dev
@@ -98,13 +99,15 @@ npm run dev
 
 The app will be running at **http://localhost:5173**
 
+> **Note:** The frontend calls `http://localhost:8000` by default. Make sure the backend is running before using the app.
+
 ---
 
 ## How It Works
 
 ### AI Response Format
 
-The backend prompts Claude to return a structured JSON object:
+The backend prompts the LLM to return a structured JSON object:
 
 ```json
 {
@@ -129,7 +132,7 @@ The backend handles LLM instability at multiple levels:
 1. **JSON extraction** — Tries direct parse → markdown fence extraction → raw regex match
 2. **Field validation** — Validates `sentiment` enum and `tree_reaction` hex format
 3. **Safe fallback** — If all parsing fails, returns a sensible default response instead of crashing
-4. **HTTP errors** — FastAPI error handler returns structured error messages
+4. **HTTP errors** — FastAPI returns structured error messages
 
 ### Loading State UX
 
@@ -144,29 +147,10 @@ The backend handles LLM instability at multiple levels:
 
 ### Backend (`backend/.env`)
 ```
-ANTHROPIC_API_KEY=sk-ant-your-key-here
+GROQ_API_KEY=gsk_your-key-here
 ```
 
-### Frontend (`frontend/.env`)
-```
-VITE_API_URL=http://localhost:8000
-```
-
-> ⚠️ **Never commit `.env` files.** Both are in `.gitignore`.
-
----
-
-## Building for Production
-
-```bash
-# Frontend
-cd frontend && npm run build
-# Output in frontend/dist/
-
-# Backend
-# Deploy with: uvicorn main:app --host 0.0.0.0 --port 8000
-# Recommended: gunicorn with uvicorn workers for production
-```
+> ⚠️ **Never commit `.env` files.** It is listed in `.gitignore`.
 
 ---
 
@@ -174,5 +158,6 @@ cd frontend && npm run build
 
 - **Procedural tree over GLTF model** — Full programmatic control over colors and lighting reactions. No asset loading latency.
 - **FastAPI over Flask** — Async support, automatic OpenAPI docs, built-in Pydantic validation.
-- **Structured JSON prompting** — System prompt strictly instructs Claude to return only JSON; fallback parsing handles edge cases gracefully.
+- **Groq (LLaMA 3.3 70B)** — Free tier, extremely fast inference, no credit card required.
+- **Structured JSON prompting** — System prompt strictly instructs the LLM to return only JSON; fallback parsing handles edge cases gracefully.
 - **React Three Fiber** — Declarative 3D in React with hooks integration; makes it easy to wire tree state to React state.
